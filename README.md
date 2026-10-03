@@ -67,8 +67,8 @@ whether it worked or not. That's how the list above grows.
 
 ## Install
 
-Download `Aqua-<version>.zip` from [Releases](https://github.com/M3BIONIX/Aqua/releases), unzip it
-and move `Aqua.app` to Applications. On first launch Aqua downloads its Wine engine and graphics
+Download `Aqua-<version>.dmg` from [Releases](https://github.com/M3BIONIX/Aqua/releases), open it
+and drag `Aqua.app` to Applications. On first launch Aqua downloads its Wine engine and graphics
 layers (about 160 MB, each checked against a pinned SHA-256).
 
 Aqua isn't notarized by Apple yet, so macOS blocks it the first time. Right-click `Aqua.app` and choose
@@ -90,6 +90,7 @@ Requires Xcode.
 
 ```sh
 scripts/build-app.sh          # builds build/Aqua.app
+scripts/make-dmg.sh           # packages it as build/Aqua.dmg
 swift test                    # unit tests (set DEVELOPER_DIR to Xcode if needed)
 swift build --product aqua-cli
 ```

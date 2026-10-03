@@ -5,12 +5,18 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build and attach the DMG to (e.g. v0.1.0)"
+        required: true
 
 permissions:
   contents: write
 
 jobs:
   test:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -24,30 +30,41 @@ jobs:
         run: swift test
       - name: Build Aqua.app
         run: scripts/build-app.sh
-      - name: Package
-        run: ditto -c -k --keepParent build/Aqua.app build/Aqua.zip
+      - name: Build DMG
+        run: scripts/make-dmg.sh build/Aqua.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: Aqua
-          path: build/Aqua.zip
+          path: build/Aqua.dmg
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: test
+    if: >-
+      always() &&
+      (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: macos-15
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          path: current
       - name: Build Aqua.app
         run: scripts/build-app.sh
       - name: Package
         run: |
-          ditto -c -k --keepParent build/Aqua.app "build/Aqua-${GITHUB_REF_NAME}.zip"
-          cd build && shasum -a 256 "Aqua-${GITHUB_REF_NAME}.zip" > "Aqua-${GITHUB_REF_NAME}.zip.sha256"
+          cp current/scripts/make-dmg.sh scripts/make-dmg.sh
+          scripts/make-dmg.sh "build/Aqua-${TAG}.dmg"
+          ditto -c -k --keepParent build/Aqua.app "build/Aqua-${TAG}.zip"
+          cd build && shasum -a 256 "Aqua-${TAG}.dmg" "Aqua-${TAG}.zip" > "Aqua-${TAG}.sha256"
       - name: Attach to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "Aqua $GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" "build/Aqua-${GITHUB_REF_NAME}.zip" "build/Aqua-${GITHUB_REF_NAME}.zip.sha256" --clobber
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Aqua $TAG" --generate-notes
+          gh release upload "$TAG" "build/Aqua-${TAG}.dmg" "build/Aqua-${TAG}.zip" "build/Aqua-${TAG}.sha256" --clobber
