@@ -67,22 +67,38 @@ whether it worked or not. That's how the list above grows.
 
 ## Install
 
-Download `Aqua-<version>.dmg` from [Releases](https://github.com/M3BIONIX/Aqua/releases), open it
-and drag `Aqua.app` to Applications. On first launch Aqua downloads its Wine engine and graphics
-layers (about 160 MB, each checked against a pinned SHA-256).
+**You need:** an Apple Silicon Mac (M1 or later) with macOS 14 Sonoma or later.
 
-Aqua isn't notarized by Apple yet, so macOS blocks it the first time. Right-click `Aqua.app` and choose
-**Open**, or run:
+1. **Install Rosetta 2** if you haven't already. It lets your Mac run Windows games built for Intel.
+   Open Terminal and run:
 
-```sh
-xattr -dr com.apple.quarantine /Applications/Aqua.app
-```
+   ```sh
+   softwareupdate --install-rosetta --agree-to-license
+   ```
 
-You need an Apple Silicon Mac with macOS 14 or later and Rosetta 2:
+2. **Download** `Aqua-<version>.dmg` from the latest [release](https://github.com/M3BIONIX/Aqua/releases/latest).
+3. **Open the DMG** and drag `Aqua` onto the `Applications` folder next to it.
+4. **Open Aqua** from Applications. Aqua isn't notarized by Apple yet, so the first time macOS says it
+   can't check the app. Click **Done**, then:
+   - open **System Settings → Privacy & Security**,
+   - scroll down to the message about Aqua and click **Open Anyway**,
+   - confirm with **Open Anyway** and your password.
 
-```sh
-softwareupdate --install-rosetta --agree-to-license
-```
+   Or skip the warning with one Terminal command, then open Aqua normally:
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/Aqua.app
+   ```
+
+5. **Sign in** to Steam, Epic Games or both, then choose where games go and how much disk space and
+   memory they can use. Aqua downloads its Wine engine and graphics layers in the background
+   (about 160 MB, one time, each file checked against a pinned SHA-256).
+
+To update, download the new DMG and replace `Aqua` in Applications. Your sign-ins, settings and games
+are kept in `~/Library/Application Support/Aqua` and your games folder.
+
+To uninstall, quit Aqua, delete it from Applications, and delete `~/Library/Application Support/Aqua`
+plus your games folder if you no longer want the games.
 
 ## Build
 
