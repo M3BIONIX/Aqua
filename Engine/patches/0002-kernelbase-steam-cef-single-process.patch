@@ -13,7 +13,7 @@ browser process's command line when AQUA_STEAM_CEF_SINGLE_PROCESS=1.
 +
 +    /* Aqua: Steam's Chromium UI renders black under this Wine unless its browser process runs
 +     * single-process with GPU drawing off. Steam has no switch for it, so add the flags when
-+     * Aqua asks (AQUA_STEAM_CEF_SINGLE_PROCESS=1). Same approach as GameToMac's Wine. */
++     * Aqua asks (AQUA_STEAM_CEF_SINGLE_PROCESS=1). */
 +    {
 +        const WCHAR *base = wcsrchr( app_name, '\\' );
 +        WCHAR enabled[2];

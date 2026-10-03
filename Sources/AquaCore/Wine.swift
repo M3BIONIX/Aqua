@@ -42,7 +42,7 @@ public struct WineRuntime: Sendable {
         // Mesa's KosmicKrisp Vulkan driver. MoltenVK needs portability enumeration, which this Wine doesn't request.
         env["VK_DRIVER_FILES"] = paths.vulkanDriverManifest.path
         env["VK_ICD_FILENAMES"] = paths.vulkanDriverManifest.path
-        // Same defaults as GameToMac: more address space for 32-bit games, and copy-on-write
+        // More address space for 32-bit games, and copy-on-write
         // emulation that some anti-tamper and engine code relies on.
         env["WINE_LARGE_ADDRESS_AWARE"] = "1"
         env["WINE_SIMULATE_WRITECOPY"] = "1"

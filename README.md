@@ -29,9 +29,9 @@
 
 ## Why Aqua
 
-I saw someone build GameToMac, and it honestly pissed me off that it was paid. Running Windows
-games on a Mac is built on years of free, open work by the Wine, DXVK and DXMT communities. So I
-decided to build an open source version of it. That's it.
+I saw a paid app that runs Windows games on a Mac, and it honestly pissed me off that it was paid.
+Running Windows games on a Mac is built on years of free, open work by the Wine, DXVK and DXMT
+communities. So I decided to build an open source version. That's it.
 
 The code is probably not great, so please don't judge me on it. If you spot something that could be
 better, open a pull request. Fixes are very welcome.
@@ -67,9 +67,16 @@ whether it worked or not. That's how the list above grows.
 
 ## Install
 
-Download the latest `Aqua.app` from [Releases](https://github.com/M3BIONIX/Aqua/releases) and move it
-to Applications. On first launch Aqua downloads its Wine engine and graphics layers (about 160 MB,
-each checked against a pinned SHA-256).
+Download `Aqua-<version>.zip` from [Releases](https://github.com/M3BIONIX/Aqua/releases), unzip it
+and move `Aqua.app` to Applications. On first launch Aqua downloads its Wine engine and graphics
+layers (about 160 MB, each checked against a pinned SHA-256).
+
+Aqua isn't notarized by Apple yet, so macOS blocks it the first time. Right-click `Aqua.app` and choose
+**Open**, or run:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Aqua.app
+```
 
 You need an Apple Silicon Mac with macOS 14 or later and Rosetta 2:
 
@@ -181,5 +188,3 @@ Aqua is MIT licensed (see `LICENSE`).
 - **legendary:** GPLv3. It is downloaded at first run and runs as a separate program.
 - **D3DMetal:** Apple's. It is downloaded from the Sikarugir project at setup and never bundled.
 - **Geist and Geist Mono fonts:** SIL Open Font License (`Sources/Aqua/Resources/Fonts/OFL-Geist.txt`).
-
-`RESEARCH.md` documents how GameToMac works. No GameToMac code is used.

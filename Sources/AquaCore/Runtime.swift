@@ -13,7 +13,7 @@ public struct RuntimeComponent: Sendable {
 
 public enum RuntimeComponents {
     /// Where Aqua's own builds (the engine) are published.
-    public static let releaseBase = "https://github.com/aqua-launcher/aqua/releases/download"
+    public static let releaseBase = "https://github.com/M3BIONIX/Aqua/releases/download"
 
     /// Aqua Wine: CodeWeavers' CrossOver 26.3 Wine with Aqua's patches, built by Engine/build-engine.sh.
     public static let aquaEngine = RuntimeComponent(
