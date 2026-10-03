@@ -54,7 +54,9 @@ struct ThroughputSample {
 /// in Steam's queue and are mirrored here and controlled through the running client.
 @MainActor
 final class DownloadCenter: ObservableObject {
-    @Published private(set) var items: [DownloadItem] = []
+    @Published private(set) var items: [DownloadItem] = [] {
+        didSet { saveQueueIfChanged() }
+    }
     @Published private(set) var samples: [ThroughputSample] = []
     @Published private(set) var sessionBytes: Double = 0
 
@@ -101,7 +103,7 @@ final class DownloadCenter: ObservableObject {
 
     // MARK: Adding
 
-    func enqueue(_ game: LibraryGame) {
+    func enqueue(_ game: LibraryGame, paused: Bool = false) {
         if let existing = item(for: game.id), existing.isPending { return }
         items.removeAll { $0.id == game.id }
         nextOrder += 1
@@ -110,10 +112,11 @@ final class DownloadCenter: ObservableObject {
         case .steam(let g): art = g.headerURL
         case .epic(let g): art = g.heroURL ?? g.coverURL
         }
-        let starting: DownloadItem.State = game.store == .steam ? .preparing("Starting Steam…") : .queued
+        let starting: DownloadItem.State = paused ? .paused : (game.store == .steam ? .preparing("Starting Steam…") : .queued)
         items.append(DownloadItem(id: game.id, title: game.title, store: game.store, storeID: game.storeID, artURL: art,
                                   state: starting, order: nextOrder))
         AquaLog.write("download queued \(game.id)")
+        if paused { return }
         switch game.source {
         case .epic: pumpEpic()
         case .steam(let g): startSteam(g, id: game.id)
@@ -176,6 +179,68 @@ final class DownloadCenter: ObservableObject {
     func pauseAll() { for item in items where item.isPending && item.state != .paused { pause(item.id) } }
     func resumeAll() { for item in items where item.state == .paused { resume(item.id) } }
     func clearFinished() { items.removeAll { !$0.isPending } }
+
+    // MARK: Across launches
+
+    private struct SavedDownload: Codable, Equatable {
+        let id: String
+        let paused: Bool
+    }
+
+    private var queueFile: URL? { model?.service.paths.root.appendingPathComponent("downloads.json") }
+    private var savedQueue: [SavedDownload] = []
+
+    /// Unfinished Epic downloads, so the next launch can pick them up.
+    private func saveQueueIfChanged() {
+        let queue = items.filter { $0.store == .epic && $0.isPending }
+            .sorted { $0.order < $1.order }
+            .map { SavedDownload(id: $0.id, paused: $0.state == .paused) }
+        guard queue != savedQueue, let queueFile else { return }
+        savedQueue = queue
+        try? JSONEncoder().encode(queue).write(to: queueFile, options: .atomic)
+    }
+
+    /// Picks up Epic downloads from the last session: the saved queue, plus any legendary
+    /// download left running without Aqua, which is stopped and continued here instead.
+    func restore() async {
+        guard let model, let queueFile else { return }
+        var queue = (try? Data(contentsOf: queueFile)).flatMap { try? JSONDecoder().decode([SavedDownload].self, from: $0) } ?? []
+        for app in await stopOrphanedEpicDownloads() where !queue.contains(where: { $0.id == "epic:\(app)" }) {
+            queue.append(SavedDownload(id: "epic:\(app)", paused: false))
+        }
+        for saved in queue {
+            guard let game = model.game(id: saved.id), !game.isInstalled else { continue }
+            AquaLog.write("resuming download from last session \(saved.id)")
+            enqueue(game, paused: saved.paused)
+        }
+    }
+
+    /// legendary downloads whose Aqua has gone (their parent is launchd). Interrupting legendary
+    /// makes it save its resume data, so the download continues from where it was.
+    private func stopOrphanedEpicDownloads() async -> [String] {
+        guard let legendary = model?.service.paths.legendary.path,
+              let output = try? await Shell.run(URL(fileURLWithPath: "/bin/ps"), ["-axo", "pid=,ppid=,command="]).output else { return [] }
+        var apps: [String] = []
+        for line in output.split(separator: "\n") {
+            let fields = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+            guard fields.count == 3, let pid = Int32(fields[0]), fields[1] == "1",
+                  fields[2].hasPrefix(legendary + " -y install ") else { continue }
+            let app = fields[2].dropFirst(legendary.count + " -y install ".count).split(separator: " ").first.map(String.init) ?? ""
+            guard !app.isEmpty else { continue }
+            AquaLog.write("stopping leftover legendary download \(app) (pid \(pid))")
+            kill(pid, SIGINT)
+            for _ in 0..<40 where kill(pid, 0) == 0 { try? await Task.sleep(nanoseconds: 250_000_000) }
+            if kill(pid, 0) == 0 { kill(pid, SIGTERM) }
+            apps.append(app)
+        }
+        return apps
+    }
+
+    /// Called when Aqua quits: stop legendary so it never keeps downloading without Aqua.
+    func stopForQuit() {
+        saveQueueIfChanged()
+        epicTask?.cancel()
+    }
 
     // MARK: Epic
 

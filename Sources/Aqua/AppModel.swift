@@ -260,6 +260,7 @@ final class AppModel: ObservableObject {
         async let steam: Void = refreshSteamLibrary()
         async let epic: Void = refreshEpic()
         _ = await (steam, epic)
+        await downloads.restore()
     }
 
     func refreshSteam() {

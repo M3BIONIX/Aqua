@@ -34,6 +34,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        model.downloads.stopForQuit()
+    }
+
     @objc func showSettings() { model.route = .settings }
     @objc func showLibrary() { model.route = .library }
     @objc func showDownloads() { model.route = .downloads }
