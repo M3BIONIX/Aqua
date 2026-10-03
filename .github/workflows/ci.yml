@@ -25,7 +25,10 @@ jobs:
       - name: Show toolchain
         run: swift --version
       - name: Check install script
-        run: bash -n install.sh
+        run: |
+          bash -n install.sh
+          # Plain ASCII only: in some locales bash reads characters like "…" as part of a variable name.
+          if LC_ALL=C grep -n '[^ -~	]' install.sh; then echo "install.sh must be plain ASCII"; exit 1; fi
       - name: Build
         run: swift build
       - name: Test
