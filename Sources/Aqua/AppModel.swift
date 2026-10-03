@@ -118,6 +118,12 @@ final class AppModel: ObservableObject {
     @Published var epicGames: [EpicGame] = []
     @Published var epicLoading = false
 
+    /// Each store's first library load this launch has finished, successfully or not.
+    @Published var steamLibraryLoaded = false
+    @Published var epicLibraryLoaded = false
+    /// Set once the launch loading screen has handed over to the library.
+    @Published var libraryReady = false
+
     @Published var launching: Set<String> = []
     @Published var running: Set<String> = []
     @Published var activity: [String: GameActivity] = [:]
@@ -231,6 +237,11 @@ final class AppModel: ObservableObject {
 
     var hasAnyAccount: Bool { steamAccount != nil || epicAccount != nil }
 
+    /// Every connected store has delivered its game list (or given up) at least once this launch.
+    var libraryLoadsFinished: Bool {
+        (steamAccount == nil || steamLibraryLoaded) && epicLibraryLoaded
+    }
+
     // MARK: Storage
 
     var storageUsedBytes: Int64 {
@@ -273,6 +284,7 @@ final class AppModel: ObservableObject {
     /// Fetches owned Steam games for the account signed in to Aqua's Steam.
     func refreshSteamLibrary() async {
         lastSteamLibraryAttempt = Date()
+        defer { steamLibraryLoaded = true }
         guard service.steam.steamID64 != nil else {
             steamLibraryStatus = service.steam.isInstalled ? "Sign in inside the Steam window to load your library." : nil
             return
@@ -314,6 +326,7 @@ final class AppModel: ObservableObject {
     }
 
     func refreshEpic(refreshLibrary: Bool = false) async {
+        defer { epicLibraryLoaded = true }
         do {
             if !service.epic.isToolInstalled { try await service.epic.installTool() }
             epicAccount = try await service.epic.status().account
@@ -400,6 +413,7 @@ final class AppModel: ObservableObject {
     }
 
     func finishOnboarding() {
+        libraryReady = libraryLoadsFinished
         settings.onboarded = true
         saveSettings()
         route = .library

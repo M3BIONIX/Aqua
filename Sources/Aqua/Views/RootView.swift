@@ -6,8 +6,12 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if model.settings.onboarded {
+            if model.settings.onboarded && !model.libraryReady {
+                LoadingView()
+                    .transition(.opacity)
+            } else if model.settings.onboarded {
                 MainView()
+                    .transition(.opacity)
             } else {
                 OnboardingView()
             }

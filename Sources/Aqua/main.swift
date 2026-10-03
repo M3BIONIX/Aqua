@@ -7,6 +7,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // One Aqua at a time: two would both drive the same downloads and bottles.
+        if let id = Bundle.main.bundleIdentifier,
+           let other = NSRunningApplication.runningApplications(withBundleIdentifier: id).first(where: { $0 != .current }) {
+            other.activate()
+            NSApp.terminate(nil)
+            return
+        }
         AquaFonts.register()
         URLCache.shared = URLCache(memoryCapacity: 64 << 20, diskCapacity: 512 << 20)
         NSApp.appearance = NSAppearance(named: .darkAqua)
@@ -35,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func applicationWillTerminate(_ notification: Notification) {
-        model.downloads.stopForQuit()
+        model?.downloads.stopForQuit()
     }
 
     @objc func showSettings() { model.route = .settings }

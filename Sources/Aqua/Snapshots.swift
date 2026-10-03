@@ -20,7 +20,9 @@ enum Snapshots {
             ("6-settings", { model.route = .settings }),
         ]
         Task {
-            try? await Task.sleep(nanoseconds: 12_000_000_000)
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            capture(window, to: directory.appendingPathComponent("0-loading.png"))
+            try? await Task.sleep(nanoseconds: 9_500_000_000)
             for (name, apply) in steps {
                 apply()
                 try? await Task.sleep(nanoseconds: 4_000_000_000)

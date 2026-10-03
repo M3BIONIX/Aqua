@@ -205,10 +205,11 @@ final class DownloadCenter: ObservableObject {
     func restore() async {
         guard let model, let queueFile else { return }
         var queue = (try? Data(contentsOf: queueFile)).flatMap { try? JSONDecoder().decode([SavedDownload].self, from: $0) } ?? []
-        for app in await stopOrphanedEpicDownloads() where !queue.contains(where: { $0.id == "epic:\(app)" }) {
+        let downloads = await stopOrphanedEpicDownloads()
+        for app in downloads.stopped where !queue.contains(where: { $0.id == "epic:\(app)" }) {
             queue.append(SavedDownload(id: "epic:\(app)", paused: false))
         }
-        for saved in queue {
+        for saved in queue where !downloads.busy.contains(where: { saved.id == "epic:\($0)" }) {
             guard let game = model.game(id: saved.id), !game.isInstalled else { continue }
             AquaLog.write("resuming download from last session \(saved.id)")
             enqueue(game, paused: saved.paused)
@@ -217,23 +218,25 @@ final class DownloadCenter: ObservableObject {
 
     /// legendary downloads whose Aqua has gone (their parent is launchd). Interrupting legendary
     /// makes it save its resume data, so the download continues from where it was.
-    private func stopOrphanedEpicDownloads() async -> [String] {
+    /// `busy` are downloads another running Aqua owns; those are left alone.
+    private func stopOrphanedEpicDownloads() async -> (stopped: [String], busy: [String]) {
         guard let legendary = model?.service.paths.legendary.path,
-              let output = try? await Shell.run(URL(fileURLWithPath: "/bin/ps"), ["-axo", "pid=,ppid=,command="]).output else { return [] }
+              let output = try? await Shell.run(URL(fileURLWithPath: "/bin/ps"), ["-axo", "pid=,ppid=,command="]).output else { return ([], []) }
         var apps: [String] = []
+        var busy: [String] = []
         for line in output.split(separator: "\n") {
             let fields = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
-            guard fields.count == 3, let pid = Int32(fields[0]), fields[1] == "1",
-                  fields[2].hasPrefix(legendary + " -y install ") else { continue }
+            guard fields.count == 3, let pid = Int32(fields[0]), fields[2].hasPrefix(legendary + " -y install ") else { continue }
             let app = fields[2].dropFirst(legendary.count + " -y install ".count).split(separator: " ").first.map(String.init) ?? ""
             guard !app.isEmpty else { continue }
+            guard fields[1] == "1" else { busy.append(app); continue }
             AquaLog.write("stopping leftover legendary download \(app) (pid \(pid))")
             kill(pid, SIGINT)
             for _ in 0..<40 where kill(pid, 0) == 0 { try? await Task.sleep(nanoseconds: 250_000_000) }
             if kill(pid, 0) == 0 { kill(pid, SIGTERM) }
             apps.append(app)
         }
-        return apps
+        return (apps, busy)
     }
 
     /// Called when Aqua quits: stop legendary so it never keeps downloading without Aqua.
