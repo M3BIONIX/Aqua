@@ -44,7 +44,7 @@ jobs:
       - name: Package
         run: |
           ditto -c -k --keepParent build/Aqua.app "build/Aqua-${GITHUB_REF_NAME}.zip"
-          shasum -a 256 "build/Aqua-${GITHUB_REF_NAME}.zip" > "build/Aqua-${GITHUB_REF_NAME}.zip.sha256"
+          cd build && shasum -a 256 "Aqua-${GITHUB_REF_NAME}.zip" > "Aqua-${GITHUB_REF_NAME}.zip.sha256"
       - name: Attach to release
         env:
           GH_TOKEN: ${{ github.token }}
