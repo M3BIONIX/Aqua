@@ -1,0 +1,45 @@
+Aqua: run Steam's Chromium UI single-process with GPU drawing off.
+
+Under CrossOver 26.3 Wine on macOS, steamwebhelper.exe renders a black window in its default
+multi-process GPU mode. Steam has no switch for this, so the flags are appended to the
+browser process's command line when AQUA_STEAM_CEF_SINGLE_PROCESS=1.
+
+--- a/dlls/kernelbase/process.c	2026-10-04 01:13:50
++++ b/dlls/kernelbase/process.c	2026-10-04 01:13:51
+@@ -566,7 +566,36 @@
+             return FALSE;
+         }
+     }
++
++    /* Aqua: Steam's Chromium UI renders black under this Wine unless its browser process runs
++     * single-process with GPU drawing off. Steam has no switch for it, so add the flags when
++     * Aqua asks (AQUA_STEAM_CEF_SINGLE_PROCESS=1). Same approach as GameToMac's Wine. */
++    {
++        const WCHAR *base = wcsrchr( app_name, '\\' );
++        WCHAR enabled[2];
+ 
++        base = base ? base + 1 : app_name;
++        if (!wcsicmp( base, L"steamwebhelper.exe" ) &&
++            GetEnvironmentVariableW( L"AQUA_STEAM_CEF_SINGLE_PROCESS", enabled, ARRAY_SIZE(enabled) ) == 1 &&
++            enabled[0] == '1' && !wcsstr( tidy_cmdline, L"--type=" ) && !wcsstr( tidy_cmdline, L"--single-process" ))
++        {
++            static const WCHAR extra[] = L" --disable-gpu --single-process";
++            SIZE_T length = lstrlenW( tidy_cmdline ) + ARRAY_SIZE(extra);
++            WCHAR *modified = RtlAllocateHeap( GetProcessHeap(), 0, length * sizeof(WCHAR) );
++
++            if (!modified)
++            {
++                if (tidy_cmdline != cmd_line) HeapFree( GetProcessHeap(), 0, tidy_cmdline );
++                SetLastError( ERROR_OUTOFMEMORY );
++                return FALSE;
++            }
++            lstrcpyW( modified, tidy_cmdline );
++            lstrcatW( modified, extra );
++            if (tidy_cmdline != cmd_line) HeapFree( GetProcessHeap(), 0, tidy_cmdline );
++            tidy_cmdline = modified;
++        }
++    }
++
+     /* Warn if unsupported features are used */
+ 
+     if (flags & (IDLE_PRIORITY_CLASS | HIGH_PRIORITY_CLASS | REALTIME_PRIORITY_CLASS |

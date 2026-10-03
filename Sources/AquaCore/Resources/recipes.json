@@ -1,0 +1,183 @@
+{
+  "epic:41869934302e4b8cafac2d3c0e7c293d": {
+    "engine": "crossover24",
+    "notes": "Genshin Impact (HoYoPlay launcher). Its Chromium UI is blank on Wine 10; CrossOver 24 renders it."
+  },
+  "steam:1245620": {
+    "renderer": "d3dmetal",
+    "environment": {
+      "SteamAppId": "1245620"
+    },
+    "notes": "Elden Ring. Offline only: Easy Anti-Cheat blocks online play under Wine.",
+    "display": [
+      {
+        "format": "xml",
+        "file": "%APPDATA%\\EldenRing\\GraphicsConfig.xml",
+        "values": {
+          "Resolution-FullScreenWidth": "{width}",
+          "Resolution-FullScreenHeight": "{height}",
+          "Resolution-BorderlessScreenWidth": "{width}",
+          "Resolution-BorderlessScreenHeight": "{height}"
+        }
+      }
+    ]
+  },
+  "steam:292030": {
+    "renderer": "d3dmetal",
+    "windowsVersion": "win11",
+    "arguments": [
+      "--launcher-skip"
+    ],
+    "notes": "The Witcher 3 Remastered (DX12 build).",
+    "display": [
+      {
+        "format": "ini",
+        "file": "%DOCUMENTS%\\The Witcher 3\\user.settings",
+        "values": {
+          "Resolution": "{width}x{height}"
+        }
+      }
+    ]
+  },
+  "steam:489830": {
+    "renderer": "dxmt",
+    "notes": "Skyrim Special Edition. DXMT is faster than D3DMetal here.",
+    "display": [
+      {
+        "format": "ini",
+        "file": "%DOCUMENTS%\\My Games\\Skyrim Special Edition\\SkyrimPrefs.ini",
+        "values": {
+          "iSize W": "{width}",
+          "iSize H": "{height}"
+        }
+      }
+    ]
+  },
+  "steam:730": {
+    "renderer": "dxmt",
+    "notes": "Counter-Strike 2. Use Fullscreen Windowed on first launch.",
+    "display": [
+      {
+        "format": "keyValues",
+        "file": "%STEAM%\\userdata\\*\\730\\local\\cfg\\cs2_video.txt",
+        "values": {
+          "setting.defaultres": "{width}",
+          "setting.defaultresheight": "{height}"
+        }
+      }
+    ]
+  },
+  "steam:2357570": {
+    "renderer": "dxmt",
+    "dllOverrides": {
+      "d3d12": ""
+    },
+    "notes": "Overwatch. D3D12 disabled to avoid a mixed DXMT/D3DMetal startup crash."
+  },
+  "steam:2344520": {
+    "renderer": "d3dmetal",
+    "notes": "Diablo IV. Needs macOS 26.5 or later."
+  },
+  "steam:2694490": {
+    "renderer": "d3dmetal",
+    "notes": "Path of Exile 2."
+  },
+  "steam:990080": {
+    "renderer": "d3dmetal",
+    "notes": "Hogwarts Legacy. Must not fall back to Vulkan.",
+    "display": [
+      {
+        "format": "ini",
+        "file": "%LOCALAPPDATA%\\Hogwarts Legacy\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
+        "values": {
+          "ResolutionSizeX": "{width}",
+          "ResolutionSizeY": "{height}",
+          "LastUserConfirmedResolutionSizeX": "{width}",
+          "LastUserConfirmedResolutionSizeY": "{height}",
+          "DesiredScreenWidth": "{width}",
+          "DesiredScreenHeight": "{height}"
+        }
+      }
+    ]
+  },
+  "steam:1466860": {
+    "renderer": "d3dmetal",
+    "notes": "Age of Empires IV."
+  },
+  "steam:813780": {
+    "renderer": "d3dmetal",
+    "notes": "Age of Empires II: Definitive Edition."
+  },
+  "steam:933110": {
+    "renderer": "d3dmetal",
+    "notes": "Age of Empires III: Definitive Edition."
+  },
+  "steam:1934680": {
+    "renderer": "d3dmetal",
+    "notes": "Age of Mythology: Retold."
+  },
+  "steam:1174180": {
+    "renderer": "d3dmetal",
+    "notes": "Red Dead Redemption 2 (story mode). Rockstar launcher required."
+  },
+  "steam:2732960": {
+    "renderer": "wined3d",
+    "notes": "C&C Generals Zero Hour (DX8).",
+    "display": [
+      {
+        "format": "ini",
+        "file": "%DOCUMENTS%\\Command and Conquer Generals Zero Hour Data\\Options.ini",
+        "values": {
+          "Resolution": "{width} {height}"
+        }
+      }
+    ]
+  },
+  "steam:2229850": {
+    "renderer": "wined3d",
+    "notes": "C&C Red Alert 2 (DirectDraw)."
+  },
+  "steam:4921760": {
+    "renderer": "wined3d",
+    "windowsVersion": "win11",
+    "notes": "Heroes of Might and Magic III (DirectDraw)."
+  },
+  "steam:1905410": {
+    "display": [
+      {
+        "format": "ini",
+        "file": "%LOCALAPPDATA%\\SteinStern\\Saved\\Config\\Windows\\GameUserSettings.ini",
+        "values": {
+          "ResolutionSizeX": "{width}",
+          "ResolutionSizeY": "{height}",
+          "LastUserConfirmedResolutionSizeX": "{width}",
+          "LastUserConfirmedResolutionSizeY": "{height}",
+          "DesiredScreenWidth": "{width}",
+          "DesiredScreenHeight": "{height}"
+        }
+      }
+    ],
+    "notes": "Steinstern: Spacewar Demo (Unreal Engine 5.4)."
+  },
+  "epic:fa4240e57a3c46b39f169041b7811293": {
+    "display": [
+      {
+        "format": "ini",
+        "file": "%LOCALAPPDATA%\\Hogwarts Legacy\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
+        "values": {
+          "ResolutionSizeX": "{width}",
+          "ResolutionSizeY": "{height}",
+          "LastUserConfirmedResolutionSizeX": "{width}",
+          "LastUserConfirmedResolutionSizeY": "{height}",
+          "DesiredScreenWidth": "{width}",
+          "DesiredScreenHeight": "{height}"
+        }
+      }
+    ],
+    "renderer": "d3dmetal",
+    "notes": "Hogwarts Legacy (Epic)."
+  },
+  "steam:227300": {
+    "notes": "Euro Truck Simulator 2."
+  }
+}

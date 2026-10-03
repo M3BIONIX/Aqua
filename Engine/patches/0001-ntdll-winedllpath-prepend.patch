@@ -1,0 +1,33 @@
+Aqua: search WINEDLLPATH_PREPEND before the builtin DLL directory.
+
+Graphics layers that ship as Wine-style builtins (Apple D3DMetal, DXMT) replace Wine's
+d3d11/dxgi/d3d12. WINEDLLPATH is searched after Wine's lib dir and cannot override them.
+The variable is per process, so one bottle can run games on different renderers.
+
+--- a/dlls/ntdll/unix/loader.c	2026-10-04 00:02:23
++++ b/dlls/ntdll/unix/loader.c	2026-10-04 00:02:23
+@@ -386,14 +386,23 @@
+ 
+ static void set_dll_path(void)
+ {
+-    char *p, *path = getenv( "WINEDLLPATH" );
++    char *p, *path = getenv( "WINEDLLPATH" ), *prepend = getenv( "WINEDLLPATH_PREPEND" );
+     int i, count = 0;
+ 
+     if (path) for (p = path, count = 1; *p; p++) if (*p == ':') count++;
++    if (prepend && *prepend) for (p = prepend, count++; *p; p++) if (*p == ':') count++;
+ 
+     dll_paths = malloc( (count + 2) * sizeof(*dll_paths) );
+     count = 0;
+ 
++    /* Aqua: searched before Wine's own builtins so D3DMetal/DXMT can replace d3d11, dxgi, d3d12. */
++    if (prepend && *prepend)
++    {
++        prepend = strdup( prepend );
++        for (p = strtok( prepend, ":" ); p; p = strtok( NULL, ":" )) dll_paths[count++] = strdup( p );
++        free( prepend );
++    }
++
+     if (!build_dir) dll_paths[count++] = dll_dir;
+ 
+     if (path)

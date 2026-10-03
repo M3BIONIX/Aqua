@@ -1,0 +1,61 @@
+Aqua: cap the physical memory reported to Windows programs.
+
+AQUA_MEMORY_LIMIT_MB limits MmNumberOfPhysicalPages and the performance counters behind
+GlobalMemoryStatusEx, so games size caches and texture budgets to the memory Aqua gives them.
+
+--- a/dlls/ntdll/unix/system.c	2026-10-04 01:40:04
++++ b/dlls/ntdll/unix/system.c	2026-10-04 01:40:04
+@@ -2604,6 +2604,12 @@
+     }
+ #endif
+ 
++    if (aqua_memory_limit() && totalram > aqua_memory_limit())
++    {
++        totalram = aqua_memory_limit();
++        freeram = min( freeram, totalram );
++    }
++
+     /* Titan Quest refuses to run if TotalPageFile <= TotalPhys */
+     if (!totalswap) totalswap = page_size;
+ 
+--- a/dlls/ntdll/unix/unix_private.h	2026-10-04 01:40:04
++++ b/dlls/ntdll/unix/unix_private.h	2026-10-04 01:40:04
+@@ -280,6 +280,7 @@
+ extern void *anon_mmap_alloc( size_t size, int prot );
+ extern void virtual_init(void);
+ extern ULONG_PTR get_system_affinity_mask(void);
++extern ULONG64 aqua_memory_limit(void);
+ extern void virtual_get_system_info( SYSTEM_BASIC_INFORMATION *info, BOOL wow64 );
+ extern NTSTATUS virtual_map_builtin_module( HANDLE mapping, void **module, SIZE_T *size,
+                                             SECTION_IMAGE_INFORMATION *info, ULONG_PTR limit_low,
+--- a/dlls/ntdll/unix/virtual.c	2026-10-04 01:40:04
++++ b/dlls/ntdll/unix/virtual.c	2026-10-04 01:40:04
+@@ -3725,6 +3725,19 @@
+     return ((ULONG_PTR)1 << num_cpus) - 1;
+ }
+ 
++/* Aqua: AQUA_MEMORY_LIMIT_MB caps the physical memory reported to Windows programs, so games
++ * size their caches and texture budgets to the memory the user gave them. */
++ULONG64 aqua_memory_limit(void)
++{
++    static LONG64 limit = -1;
++    if (limit < 0)
++    {
++        const char *value = getenv( "AQUA_MEMORY_LIMIT_MB" );
++        limit = value ? (LONG64)strtoull( value, NULL, 10 ) * 1024 * 1024 : 0;
++    }
++    return limit;
++}
++
+ /***********************************************************************
+  *           virtual_get_system_info
+  */
+@@ -3755,6 +3768,8 @@
+ #else
+     info->MmHighestPhysicalPage = 0x7fffffff / page_size;
+ #endif
++    if (aqua_memory_limit())
++        info->MmHighestPhysicalPage = min( info->MmHighestPhysicalPage, max(1, aqua_memory_limit() / page_size) );
+ 
+     info->unknown                 = 0;
+     info->KeMaximumIncrement      = 0;  /* FIXME */
