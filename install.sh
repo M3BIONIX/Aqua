@@ -27,12 +27,14 @@ if ! /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
 fi
 
 say "Finding the latest Aqua release..."
-release=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest") || fail "Couldn't reach GitHub."
-dmg_url=$(printf '%s' "${release}" | grep -o '"browser_download_url": *"[^"]*\.dmg"' | head -1 | sed 's/.*"\(https[^"]*\)"/\1/')
-sum_url=$(printf '%s' "${release}" | grep -o '"browser_download_url": *"[^"]*\.sha256"' | head -1 | sed 's/.*"\(https[^"]*\)"/\1/')
-[[ -n "${dmg_url}" ]] || fail "The latest release has no DMG."
-[[ -n "${sum_url}" ]] || fail "The latest release has no checksum file."
-dmg_name=$(basename "${dmg_url}")
+# github.com redirects /releases/latest to the newest tag; unlike the API it has no rate limit.
+latest=$(curl -fsSL --retry 3 --retry-delay 2 -o /dev/null -w '%{url_effective}' "https://github.com/${REPO}/releases/latest") \
+  || fail "Couldn't reach GitHub. Check your connection and try again."
+tag=${latest##*/}
+[[ "${tag}" == v* ]] || fail "Couldn't find the latest release (got ${latest})."
+dmg_name="Aqua-${tag}.dmg"
+dmg_url="https://github.com/${REPO}/releases/download/${tag}/${dmg_name}"
+sum_url="https://github.com/${REPO}/releases/download/${tag}/Aqua-${tag}.sha256"
 
 work=$(mktemp -d)
 mount=""
@@ -43,8 +45,8 @@ cleanup() {
 trap cleanup EXIT
 
 say "Downloading ${dmg_name}..."
-curl -fL --progress-bar -o "${work}/${dmg_name}" "${dmg_url}" || fail "Download failed."
-curl -fsSL -o "${work}/sums" "${sum_url}" || fail "Couldn't download the checksum file."
+curl -fL --retry 3 --retry-delay 2 --progress-bar -o "${work}/${dmg_name}" "${dmg_url}" || fail "Download failed. Please try again."
+curl -fsSL --retry 3 --retry-delay 2 -o "${work}/sums" "${sum_url}" || fail "Couldn't download the checksum file."
 
 expected=$(grep " ${dmg_name}\$" "${work}/sums" | cut -d' ' -f1)
 actual=$(shasum -a 256 "${work}/${dmg_name}" | cut -d' ' -f1)
