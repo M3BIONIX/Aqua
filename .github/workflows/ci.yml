@@ -24,6 +24,8 @@ jobs:
           fetch-depth: 0
       - name: Show toolchain
         run: swift --version
+      - name: Check install script
+        run: bash -n install.sh
       - name: Build
         run: swift build
       - name: Test

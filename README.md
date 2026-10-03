@@ -69,33 +69,54 @@ whether it worked or not. That's how the list above grows.
 
 **You need:** an Apple Silicon Mac (M1 or later) with macOS 14 Sonoma or later.
 
-1. **Install Rosetta 2** if you haven't already. It lets your Mac run Windows games built for Intel.
-   Open Terminal and run:
+### The easy way (recommended)
+
+Open Terminal and paste this:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/M3BIONIX/Aqua/main/install.sh | bash
+```
+
+That's it. It downloads the latest release, checks it against its SHA-256 checksum, installs Rosetta 2
+if you don't have it, puts Aqua in Applications and opens it. Run the same command again to update.
+
+**Why not just a normal download?** Apple charges $99 a year to sign and notarize Mac apps, and I'm
+poor. Without that, macOS shows *"Apple could not verify 'Aqua' is free of malware"* when you open a
+downloaded DMG. Apps installed with the command above aren't flagged as downloaded from a browser, so
+that warning never shows up. You can read [`install.sh`](install.sh) before running it; it's short.
+
+### With the DMG
+
+If you'd rather download it yourself:
+
+1. Install Rosetta 2 if you haven't already. Open Terminal and run:
 
    ```sh
    softwareupdate --install-rosetta --agree-to-license
    ```
 
-2. **Download** `Aqua-<version>.dmg` from the latest [release](https://github.com/M3BIONIX/Aqua/releases/latest).
-3. **Open the DMG** and drag `Aqua` onto the `Applications` folder next to it.
-4. **Open Aqua** from Applications. Aqua isn't notarized by Apple yet, so the first time macOS says it
-   can't check the app. Click **Done**, then:
+2. Download `Aqua-<version>.dmg` from the latest [release](https://github.com/M3BIONIX/Aqua/releases/latest).
+3. Open the DMG and drag `Aqua` onto the `Applications` folder next to it.
+4. Open Aqua. Because it isn't notarized, macOS shows the "Apple could not verify" warning the first
+   time. Click **Done**, then:
    - open **System Settings → Privacy & Security**,
    - scroll down to the message about Aqua and click **Open Anyway**,
    - confirm with **Open Anyway** and your password.
 
-   Or skip the warning with one Terminal command, then open Aqua normally:
+   Or remove the warning with one Terminal command, then open Aqua normally:
 
    ```sh
    xattr -dr com.apple.quarantine /Applications/Aqua.app
    ```
 
-5. **Sign in** to Steam, Epic Games or both, then choose where games go and how much disk space and
-   memory they can use. Aqua downloads its Wine engine and graphics layers in the background
-   (about 160 MB, one time, each file checked against a pinned SHA-256).
+### First launch
 
-To update, download the new DMG and replace `Aqua` in Applications. Your sign-ins, settings and games
-are kept in `~/Library/Application Support/Aqua` and your games folder.
+Sign in to Steam, Epic Games or both, then choose where games go and how much disk space and memory
+they can use. Aqua downloads its Wine engine and graphics layers in the background (about 160 MB, one
+time, each file checked against a pinned SHA-256).
+
+Your sign-ins, settings and games are kept in `~/Library/Application Support/Aqua` and your games
+folder, so updating Aqua keeps them.
 
 To uninstall, quit Aqua, delete it from Applications, and delete `~/Library/Application Support/Aqua`
 plus your games folder if you no longer want the games.
