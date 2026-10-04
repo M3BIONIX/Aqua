@@ -177,6 +177,8 @@ Aqua's default engine is built from CodeWeavers' CrossOver 26.3 source (Wine 11)
 3. Games are told the memory limit you chose (`AQUA_MEMORY_LIMIT_MB`).
 4. `NtQueryDirectoryObject` reads only the defined byte of its BOOLEAN arguments, so games that
    enumerate system objects at startup (Hogwarts Legacy) don't loop forever.
+5. 32-bit programs can't reserve a block larger than Windows would give them (0x7fff0000 bytes), so
+   FreeArc-based repack installers don't spin at 0% probing memory.
 
 ```sh
 Engine/build-engine.sh        # about 10 minutes on Apple Silicon, produces aqua-wine-cx26.3.0-r<N>.tar.xz

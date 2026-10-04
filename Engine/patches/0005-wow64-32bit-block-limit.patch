@@ -1,0 +1,45 @@
+Aqua: refuse 32-bit allocations larger than Windows could ever satisfy.
+
+On Windows the largest contiguous block a 32-bit process can reserve is 0x7fff0000 bytes:
+KUSER_SHARED_DATA at 0x7ffe0000 and the system DLLs split the address space. Wine leaves
+0x7fff0000-0xffff0000 free, so a 2GB reservation succeeds. FreeArc 0.67, the unpacker in many
+repacked game installers, binary-searches for its largest block with 32-bit arithmetic; after that
+success lo + hi overflows, the search walks down to VirtualAlloc(0) and spins forever at 0%.
+
+--- a/dlls/wow64/virtual.c	2026-10-04 15:53:44
++++ b/dlls/wow64/virtual.c	2026-10-04 15:53:44
+@@ -134,8 +134,18 @@
+     }
+     *ret_params = params;
+     return STATUS_SUCCESS;
++}
++
++/* Aqua: the largest block a 32-bit process can get on Windows is 0x7fff0000 bytes (0x80000000 up
++ * to 0xffff0000): KUSER_SHARED_DATA and the system DLLs split the rest. Wine leaves 0x7fff0000-0xffff0000
++ * free, and programs that binary-search for their largest block with 32-bit arithmetic (FreeArc's
++ * unpacker in many game installers) overflow after a 2GB reservation succeeds and loop forever. */
++static BOOL exceeds_32bit_block( SIZE_T size )
++{
++    return size > 0x7fff0000;
+ }
+ 
++
+ /**********************************************************************
+  *           wow64_NtAllocateVirtualMemory
+  */
+@@ -154,6 +164,7 @@
+     NTSTATUS status;
+ 
+     if (!addr && (type & MEM_COMMIT)) type |= MEM_RESERVE;
++    if (is_current && exceeds_32bit_block( size )) return STATUS_NO_MEMORY;
+ 
+     if (!is_current) send_cross_process_notification( process, CrossProcessPreVirtualAlloc,
+                                                       addr, size, 3, type, protect, 0 );
+@@ -195,6 +206,7 @@
+     BOOL set_limit = (!*addr32 && is_current);
+ 
+     if (!addr) type |= MEM_RESERVE;
++    if (is_current && exceeds_32bit_block( size )) return STATUS_NO_MEMORY;
+ 
+     if ((status = mem_extended_parameters_32to64( &params64, params32, &count, set_limit ))) return status;
+ 
