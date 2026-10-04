@@ -168,12 +168,33 @@ public struct Bottle: Sendable, Hashable {
         }
     }
 
+    /// Wine only loads a builtin DLL from WINEDLLPATH_PREPEND when system32/syswow64 holds a file for it.
+    /// Renderer DLLs Wine itself lacks (DXMT's winemetal) get one: their own Wine-builtin copy, which
+    /// the loader treats as a placeholder. Files already there are left alone.
+    func installRendererPlaceholders(_ renderer: Renderer) throws {
+        guard let folder = renderer.frameworkFolder else { return }
+        let source = paths.frameworks.appendingPathComponent("renderer/\(folder)/wine")
+        let windows = driveC.appendingPathComponent("windows")
+        for (arch, folder) in [("x86_64-windows", "system32"), ("i386-windows", "syswow64")] {
+            for dll in renderer.dlls {
+                let file = source.appendingPathComponent("\(arch)/\(dll).dll")
+                let target = windows.appendingPathComponent("\(folder)/\(dll).dll")
+                guard FileManager.default.fileExists(atPath: file.path),
+                      !FileManager.default.fileExists(atPath: target.path) else { continue }
+                try FileManager.default.copyItem(at: file, to: target)
+            }
+        }
+    }
+
     /// Per-launch setup shared by all stores.
     func prepareLaunch(recipe: GameRecipe, settings: AquaSettings, using runtime: WineRuntime) async throws {
         try await prepare(using: runtime)
         try mapDrive(Bottle.gamesDrive, to: settings.gamesURL)
         try await setRetinaMode(settings.retinaMode, using: runtime)
         if recipe.renderer == .dxvk, !engine.usesRendererVariables { try installDXVK() }
+        if let renderer = recipe.renderer, renderer != .dxvk, !engine.usesRendererVariables {
+            try installRendererPlaceholders(renderer)
+        }
         try await DisplaySettingsWriter.apply(recipe.settingsFiles, size: .main(retina: settings.retinaMode), bottle: self, runtime: runtime)
     }
 
