@@ -171,6 +171,8 @@ Aqua's default engine is built from CodeWeavers' CrossOver 26.3 source (Wine 11)
 1. Renderer DLLs (D3DMetal, DXMT) are searched before Wine's own.
 2. Steam's browser runs single-process, so its UI isn't a black window.
 3. Games are told the memory limit you chose (`AQUA_MEMORY_LIMIT_MB`).
+4. `NtQueryDirectoryObject` reads only the defined byte of its BOOLEAN arguments, so games that
+   enumerate system objects at startup (Hogwarts Legacy) don't loop forever.
 
 ```sh
 Engine/build-engine.sh        # about 10 minutes on Apple Silicon, produces aqua-wine-cx26.3.0-r<N>.tar.xz

@@ -1,0 +1,30 @@
+Aqua: read only the low byte of NtQueryDirectoryObject's BOOLEAN arguments.
+
+Windows leaves the upper bits of BOOLEAN arguments undefined. Testing the whole register made
+restart look TRUE, so callers that enumerate object directories (Hogwarts Legacy at startup) looped
+forever on get_directory_entries.
+
+--- a/dlls/ntdll/unix/sync.c	2026-07-15 16:07:33
++++ b/dlls/ntdll/unix/sync.c	2026-10-04 10:35:34
+@@ -2081,7 +2081,11 @@
+                                         ULONG *context, ULONG *ret_size )
+ {
+     unsigned int status, i, count, total_len, pos, used_size, used_count, strpool_head;
+-    ULONG index = restart ? 0 : *context;
++    /* Aqua: Windows only defines the low byte of a BOOLEAN argument. The syscall dispatcher
++     * passes the rest of the register through and clang assumes it is zero-extended, so a
++     * stray upper bit reads as TRUE and every call restarts the enumeration. Read the bytes. */
++    volatile BOOLEAN restart_flag = restart, single_entry_flag = single_entry;
++    ULONG index = restart_flag ? 0 : *context;
+     struct directory_entry *entries;
+ 
+     if (!(entries = malloc( size ))) return STATUS_NO_MEMORY;
+@@ -2090,7 +2094,7 @@
+     {
+         req->handle = wine_server_obj_handle( handle );
+         req->index = index;
+-        req->max_count = single_entry ? 1 : UINT_MAX;
++        req->max_count = single_entry_flag ? 1 : UINT_MAX;
+         wine_server_set_reply( req, entries, size );
+         status = wine_server_call( req );
+         count = reply->count;
