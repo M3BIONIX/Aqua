@@ -22,6 +22,7 @@ struct RootView: View {
         .font(.geist(14))
         .ignoresSafeArea()
         .sheet(isPresented: $model.showEpicLogin) { EpicLoginView().environmentObject(model) }
+        .sheet(isPresented: $model.showAddGame) { AddGameView().environmentObject(model) }
         .alert("Something went wrong", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK") { model.errorMessage = nil }
             Button("Open Logs") { model.revealLogs(); model.errorMessage = nil }

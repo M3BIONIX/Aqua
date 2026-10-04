@@ -6,45 +6,58 @@ struct LibraryGame: Identifiable, Hashable {
     enum Source: Hashable {
         case steam(SteamGame)
         case epic(EpicGame)
+        case local(LocalGame)
     }
 
     let source: Source
     var id: String { "\(store.rawValue):\(storeID)" }
-    var store: Store { if case .steam = source { return .steam }; return .epic }
+    var store: Store {
+        switch source {
+        case .steam: return .steam
+        case .epic: return .epic
+        case .local: return .local
+        }
+    }
     var storeID: String {
         switch source {
         case .steam(let g): return g.appID
         case .epic(let g): return g.appName
+        case .local(let g): return g.id
         }
     }
     var title: String {
         switch source {
         case .steam(let g): return g.name
         case .epic(let g): return g.title
+        case .local(let g): return g.title
         }
     }
     var coverURL: URL? {
         switch source {
         case .steam(let g): return g.coverURL
         case .epic(let g): return g.coverURL
+        case .local(let g): return g.coverURL
         }
     }
     var heroURL: URL? {
         switch source {
         case .steam(let g): return g.heroURL
         case .epic(let g): return g.heroURL ?? g.coverURL
+        case .local(let g): return g.heroURL
         }
     }
     var isInstalled: Bool {
         switch source {
         case .steam(let g): return g.state == .installed || g.state == .updateRequired
         case .epic(let g): return g.install != nil
+        case .local: return true
         }
     }
     var installedBytes: Int64 {
         switch source {
         case .steam(let g): return isInstalled ? g.sizeOnDisk : 0
         case .epic(let g): return g.install?.sizeBytes ?? 0
+        case .local: return 0
         }
     }
     var isWindowsGame: Bool {
@@ -117,6 +130,7 @@ final class AppModel: ObservableObject {
     @Published var epicChecked = false
     @Published var epicGames: [EpicGame] = []
     @Published var epicLoading = false
+    @Published var localGames: [LocalGame] = []
 
     /// Each store's first library load this launch has finished, successfully or not.
     @Published var steamLibraryLoaded = false
@@ -147,6 +161,7 @@ final class AppModel: ObservableObject {
             activity = saved
         }
         downloads.model = self
+        localGames = service.local.games()
         Task { await refreshAll() }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
@@ -165,7 +180,7 @@ final class AppModel: ObservableObject {
             if let existing = seen[key], existing.isInstalled || !game.isInstalled { continue }
             seen[key] = game
         }
-        return Array(seen.values)
+        return Array(seen.values) + localGames.map { LibraryGame(source: .local($0)) }
     }
 
     var visibleGames: [LibraryGame] {
@@ -206,7 +221,8 @@ final class AppModel: ObservableObject {
     }
 
     func game(id: String) -> LibraryGame? {
-        (steamGames.map { LibraryGame(source: .steam($0)) } + epicGames.map { LibraryGame(source: .epic($0)) }).first { $0.id == id }
+        (steamGames.map { LibraryGame(source: .steam($0)) } + epicGames.map { LibraryGame(source: .epic($0)) }
+            + localGames.map { LibraryGame(source: .local($0)) }).first { $0.id == id }
     }
 
     func recipe(for game: LibraryGame) -> GameRecipe { service.recipe(for: game.store, id: game.storeID) }
@@ -498,6 +514,7 @@ final class AppModel: ObservableObject {
     // MARK: Games
 
     func install(_ game: LibraryGame) {
+        if case .local = game.source { return }
         AquaLog.write("install \(game.id) (\(game.title)) to \(settings.gamesLocation)")
         guard runtimeInstalled || game.store == .epic else {
             errorMessage = "Aqua is still setting up. Installs can start once that finishes."
@@ -534,16 +551,22 @@ final class AppModel: ObservableObject {
                 case .steam(let g):
                     try await service.launch(steamGame: g)
                 case .epic(let g):
-                    let process = try await service.launch(epicGame: g)
-                    running.insert(id)
-                    Task.detached {
-                        process.waitUntilExit()
-                        await MainActor.run { _ = self.running.remove(id) }
-                    }
+                    track(try await service.launch(epicGame: g), id: id)
+                case .local(let g):
+                    track(try await service.launch(localGame: g), id: id)
                 }
             } catch {
                 report(error)
             }
+        }
+    }
+
+    /// Marks a game running until its process exits.
+    private func track(_ process: Process, id: String) {
+        running.insert(id)
+        Task.detached {
+            process.waitUntilExit()
+            await MainActor.run { _ = self.running.remove(id) }
         }
     }
 
@@ -553,6 +576,7 @@ final class AppModel: ObservableObject {
                 switch game.store {
                 case .steam: try await service.steam.bottle.stop(using: service.wine)
                 case .epic: try await service.epic.stopAll()
+                case .local: try await service.local.stopAll()
                 }
                 running.remove(game.id)
             } catch { report(error) }
@@ -563,6 +587,53 @@ final class AppModel: ObservableObject {
         do {
             try RecipeBook.saveOverride(GameRecipe(renderer: renderer), store: game.store, id: game.storeID)
             objectWillChange.send()
+        } catch { report(error) }
+    }
+
+    // MARK: Games added from this Mac
+
+    @Published var showAddGame = false
+
+    /// Runs a Windows installer and returns the new programs it put on disk, best guess first.
+    func runLocalInstaller(_ installer: URL) async -> [URL] {
+        let library = service.local
+        let settings = settings
+        do {
+            return try await Task.detached { try await library.install(installer, settings: settings) }.value
+        } catch {
+            report(error)
+            return []
+        }
+    }
+
+    func stopLocalInstaller() {
+        Task { try? await service.local.stopAll() }
+    }
+
+    /// Adds a game by its .exe and looks up cover art for it on Steam.
+    @discardableResult
+    func addLocalGame(executable: URL, title: String) async -> LibraryGame? {
+        var game = LocalGame(title: title.trimmingCharacters(in: .whitespaces).isEmpty ? LocalLibrary.suggestedTitle(for: executable) : title,
+                             executable: executable.path)
+        game.steamAppID = await LocalLibrary.steamArtwork(for: game.title)
+        do {
+            try service.local.add(game)
+            localGames = service.local.games()
+            AquaLog.write("local game added \(game.title) (\(executable.lastPathComponent))")
+            return LibraryGame(source: .local(game))
+        } catch {
+            report(error)
+            return nil
+        }
+    }
+
+    func removeLocalGame(_ game: LibraryGame) {
+        guard case .local(let g) = game.source else { return }
+        do {
+            try service.local.remove(id: g.id)
+            try? RecipeBook.setUserOverride(nil, store: .local, id: g.id, paths: service.paths)
+            localGames = service.local.games()
+            if route == .game(game.id) { route = .library }
         } catch { report(error) }
     }
 
@@ -584,6 +655,7 @@ final class AppModel: ObservableObject {
         switch game.store {
         case .steam: return service.steam.bottle
         case .epic: return service.epic.bottle(for: recipe(for: game).engine ?? .default)
+        case .local: return service.local.bottle(for: recipe(for: game).engine ?? .default)
         }
     }
 
@@ -630,6 +702,7 @@ final class AppModel: ObservableObject {
         switch game.source {
         case .epic(let g): return g.install?.path
         case .steam(let g): return game.isInstalled ? g.libraryPath.appendingPathComponent("steamapps/common/\(g.installDir)").path : nil
+        case .local(let g): return g.folder.path
         }
     }
 }

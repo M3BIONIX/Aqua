@@ -30,6 +30,11 @@ enum Snapshots {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 capture(window, to: directory.appendingPathComponent("\(name).png"))
             }
+            model.route = .library
+            model.showAddGame = true
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if let sheet = window.attachedSheet { capture(sheet, to: directory.appendingPathComponent("7-add-game.png")) }
+            model.showAddGame = false
             captureFullGamePage(model: model, to: directory.appendingPathComponent("4-game-full.png"))
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             model.settings.onboarded = onboarded

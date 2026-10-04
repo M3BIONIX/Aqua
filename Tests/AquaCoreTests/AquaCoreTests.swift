@@ -326,3 +326,40 @@ final class LaunchOptionsTextTests: XCTestCase {
         XCTAssertEqual(LaunchOptionsText.parseFiles(LaunchOptionsText.formatFiles(files)), files)
     }
 }
+
+final class LocalGamesTests: XCTestCase {
+    func testSuggestedTitleSkipsBuildFolders() {
+        XCTAssertEqual(LocalLibrary.suggestedTitle(for: URL(fileURLWithPath: "/g/Hollow Knight/hollow_knight.exe")), "Hollow Knight")
+        XCTAssertEqual(LocalLibrary.suggestedTitle(for: URL(fileURLWithPath: "/g/Cool_Game/Binaries/Win64/Cool.exe")), "Cool Game")
+        XCTAssertEqual(LocalLibrary.suggestedTitle(for: URL(fileURLWithPath: "/u/Downloads/Tetris.exe")), "Tetris")
+    }
+
+    func testCandidatesDropHelpers() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("aqua-local-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let files = ["Game.exe": 3000, "Launcher.exe": 1000, "unins000.exe": 5000, "vc_redist.x64.exe": 9000, "UnityCrashHandler64.exe": 4000]
+        for (name, size) in files { try Data(count: size).write(to: dir.appendingPathComponent(name)) }
+        let found = LocalLibrary.executables(in: [dir])
+        XCTAssertEqual(found.count, 5)
+        XCTAssertEqual(LocalLibrary.gameCandidates(found).map(\.lastPathComponent), ["Game.exe", "Launcher.exe"])
+    }
+
+    func testArtworkMatch() {
+        let results = [(id: "1", name: "Hollow Knight: Silksong"), (id: "2", name: "Hollow Knight"), (id: "3", name: "Knight")]
+        XCTAssertEqual(LocalLibrary.bestMatch(for: "Hollow Knight", in: results), "2")
+        XCTAssertEqual(LocalLibrary.bestMatch(for: "hollow-knight", in: results), "2")
+        XCTAssertNil(LocalLibrary.bestMatch(for: "Celeste", in: results))
+    }
+
+    func testLibraryRoundTrip() throws {
+        let paths = AquaPaths(root: FileManager.default.temporaryDirectory.appendingPathComponent("aqua-lib-\(UUID().uuidString)"))
+        defer { try? FileManager.default.removeItem(at: paths.root) }
+        let library = LocalLibrary(paths: paths, wine: WineRuntime(paths: paths))
+        let game = try library.add(LocalGame(title: "Tetris", executable: "/tmp/tetris.exe"))
+        XCTAssertEqual(library.games().map(\.title), ["Tetris"])
+        XCTAssertEqual(library.bottle(for: .aqua).name, "local")
+        try library.remove(id: game.id)
+        XCTAssertTrue(library.games().isEmpty)
+    }
+}

@@ -8,6 +8,7 @@ public final class AquaService: @unchecked Sendable {
     public let steam: SteamStore
     public let epic: EpicStore
     public let steamLibrary: SteamLibrary
+    public let local: LocalLibrary
 
     public init(paths: AquaPaths = .shared) {
         self.paths = paths
@@ -16,6 +17,7 @@ public final class AquaService: @unchecked Sendable {
         steam = SteamStore(paths: paths, wine: wine)
         epic = EpicStore(paths: paths, wine: wine)
         steamLibrary = SteamLibrary(steam: steam)
+        local = LocalLibrary(paths: paths, wine: wine)
     }
 
     public var settings: AquaSettings { AquaSettings.load(paths) }
@@ -38,5 +40,13 @@ public final class AquaService: @unchecked Sendable {
         let recipe = recipe(for: .epic, id: epicGame.appName)
         try await runtime.install(recipe.engine ?? .default, progress: progress)
         return try await epic.launch(epicGame, recipe: recipe, settings: settings)
+    }
+
+    @discardableResult
+    public func launch(localGame: LocalGame) async throws -> Process {
+        try requireRuntime()
+        let recipe = recipe(for: .local, id: localGame.id)
+        try await runtime.install(recipe.engine ?? .default)
+        return try await local.launch(localGame, recipe: recipe, settings: settings)
     }
 }

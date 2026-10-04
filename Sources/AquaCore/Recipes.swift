@@ -23,7 +23,16 @@ public enum Renderer: String, Codable, CaseIterable, Sendable {
 
 public enum Store: String, Codable, Sendable, CaseIterable {
     case steam, epic
-    public var displayName: String { self == .steam ? "Steam" : "Epic Games" }
+    /// Games added from an .exe on this Mac.
+    case local
+
+    public var displayName: String {
+        switch self {
+        case .steam: return "Steam"
+        case .epic: return "Epic Games"
+        case .local: return "Added from this Mac"
+        }
+    }
 }
 
 /// Per-game compatibility settings. All fields are optional so a recipe states only what

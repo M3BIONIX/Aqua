@@ -21,7 +21,12 @@ aqua-cli: test harness for Aqua's core
   epic play <app_name>         Launch an Epic game
   epic plan <app_name>         Show the launch command without running it
   epic stop                    Stop all Epic games
-  recipe <steam|epic> <id>     Show the effective recipe for a game
+  local install <setup.exe>    Run a Windows installer, then list what it installed
+  local add <game.exe> [name]  Add a game from an .exe on this Mac
+  local list                   List games added from this Mac
+  local play <id or name>      Launch an added game
+  local remove <id or name>    Remove an added game from the library (files stay)
+  recipe <steam|epic|local> <id>  Show the effective recipe for a game
 
 Set AQUA_HOME to use a different data folder.
 """
@@ -201,6 +206,42 @@ func run(_ input: [String]) async throws {
         let result = try await Shell.run(bottle.wine, Array(args.dropFirst(2)), environment: env, timeout: 180, allowedStatus: nil)
         say(result.output.split(separator: "\n").filter { !$0.contains("fixme:") }.joined(separator: "\n"))
         say("exit status: \(result.status)")
+
+    case ("local", "install"):
+        guard args.count > 1 else { throw AquaError("Usage: local install <setup.exe|installer.msi>") }
+        try service.requireRuntime()
+        let installer = URL(fileURLWithPath: args[1]).standardizedFileURL
+        say("Running \(installer.lastPathComponent). Finish the installer in its window…")
+        let found = try await service.local.install(installer, settings: service.settings)
+        say(found.isEmpty ? "No new programs found." : "New programs, best guess first:\n" + found.map { "  " + $0.path }.joined(separator: "\n"))
+        if let first = found.first { say("Add it with: aqua-cli local add \"\(first.path)\"") }
+
+    case ("local", "add"):
+        guard args.count > 1 else { throw AquaError("Usage: local add <game.exe> [name]") }
+        let exe = URL(fileURLWithPath: args[1]).standardizedFileURL
+        guard FileManager.default.fileExists(atPath: exe.path) else { throw AquaError("No file at \(exe.path)") }
+        var game = LocalGame(title: args.count > 2 ? args[2...].joined(separator: " ") : LocalLibrary.suggestedTitle(for: exe), executable: exe.path)
+        game.steamAppID = await LocalLibrary.steamArtwork(for: game.title)
+        try service.local.add(game)
+        say("Added \(game.title) (\(game.id))\(game.steamAppID.map { ", cover art from Steam app \($0)" } ?? "").")
+
+    case ("local", "list"):
+        let games = service.local.games()
+        say(games.isEmpty ? "No games added from this Mac." : games.map { "\($0.id)  \($0.title)  \($0.executable)" }.joined(separator: "\n"))
+
+    case ("local", "play"), ("local", "remove"):
+        guard args.count > 1 else { throw AquaError("Usage: local \(sub) <id or name>") }
+        let query = args[1...].joined(separator: " ")
+        guard let game = service.local.games().first(where: { $0.id == query || $0.title.localizedCaseInsensitiveCompare(query) == .orderedSame }) else {
+            throw AquaError("No added game matches \(query). See: aqua-cli local list")
+        }
+        if sub == "remove" {
+            try service.local.remove(id: game.id)
+            say("Removed \(game.title) from the library. Its files are still at \(game.folder.path).")
+        } else {
+            let process = try await service.launch(localGame: game)
+            say("Started \(game.title) (pid \(process.processIdentifier)). Log: \(service.paths.logs.appendingPathComponent("local-\(game.id).log").path)")
+        }
 
     case ("recipe", _):
         guard args.count > 1, let store = Store(rawValue: args[0]) else { throw AquaError("Usage: recipe <steam|epic> <id>") }

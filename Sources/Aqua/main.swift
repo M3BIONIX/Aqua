@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showSettings() { model.route = .settings }
     @objc func showLibrary() { model.route = .library }
     @objc func showDownloads() { model.route = .downloads }
+    @objc func showAddGame() { if model.settings.onboarded { model.showAddGame = true } }
 
     private func buildMenu() {
         let main = NSMenu()
@@ -67,6 +68,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit Aqua", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
+
+        let fileItem = NSMenuItem()
+        main.addItem(fileItem)
+        let file = NSMenu(title: "File")
+        file.addItem(withTitle: "Add Windows Game…", action: #selector(showAddGame), keyEquivalent: "n")
+        fileItem.submenu = file
 
         let editItem = NSMenuItem()
         main.addItem(editItem)

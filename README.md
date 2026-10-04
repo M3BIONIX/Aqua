@@ -52,6 +52,9 @@ whether it worked or not. That's how the list above grows.
 
 - **One library.** Sign in to Steam, Epic Games or both, and every game you own shows up in one grid.
   Sign-ins stay saved.
+- **Games from anywhere else.** Add a Windows game that isn't on Steam or Epic (a DRM-free
+  download from GOG or itch.io, an old disc): run its installer, or point Aqua at the game's `.exe`.
+  Aqua finds cover art for it and it shows up in the same library.
 - **Install and play from Aqua.** Aqua sets up its Windows engine and Steam for you, so there is
   nothing else to install.
 - **Downloads you can control.** Pause, resume, reorder and cancel downloads from both stores, with a
@@ -141,6 +144,7 @@ aqua-cli doctor
 aqua-cli setup                      # Wine runtime
 aqua-cli steam install | open | games | play <appid> | stop
 aqua-cli epic login [code] | status | games | install <app> | play <app> | stop
+aqua-cli local install <setup.exe> | add <game.exe> [name] | list | play <name> | remove <name>
 aqua-cli recipe steam 730
 ```
 

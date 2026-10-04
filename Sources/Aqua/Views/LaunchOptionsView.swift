@@ -28,7 +28,7 @@ struct LaunchOptionsEditor: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(alignment: .top, spacing: 28) {
-                if game.store == .epic {
+                if game.store != .steam {
                     OptionMenu(title: "Wine engine", value: engine?.displayName ?? "Aqua's choice (\((bundled?.engine ?? .default).displayName))") {
                         Button("Aqua's choice") { engine = nil }
                         Divider()
@@ -98,7 +98,7 @@ struct LaunchOptionsEditor: View {
 
     private var edited: GameRecipe? {
         var recipe = loaded ?? GameRecipe()
-        recipe.engine = game.store == .epic ? engine : loaded?.engine
+        recipe.engine = game.store != .steam ? engine : loaded?.engine
         recipe.windowsVersion = windowsVersion
         recipe.advertiseAVX = advertiseAVX
         let args = LaunchOptionsText.parseArguments(arguments)

@@ -109,6 +109,7 @@ final class DownloadCenter: ObservableObject {
         nextOrder += 1
         let art: URL?
         switch game.source {
+        case .local: return
         case .steam(let g): art = g.headerURL
         case .epic(let g): art = g.heroURL ?? g.coverURL
         }
@@ -118,6 +119,7 @@ final class DownloadCenter: ObservableObject {
         AquaLog.write("download queued \(game.id)")
         if paused { return }
         switch game.source {
+        case .local: return
         case .epic: pumpEpic()
         case .steam(let g): startSteam(g, id: game.id)
         }
@@ -128,6 +130,7 @@ final class DownloadCenter: ObservableObject {
     func pause(_ id: String) {
         guard let item = item(for: id) else { return }
         switch item.store {
+        case .local: return
         case .epic:
             update(id) { $0.state = .paused; $0.networkBytesPerSecond = 0; $0.diskBytesPerSecond = 0 }
             if epicActiveID == id { epicTask?.cancel() }
@@ -140,6 +143,7 @@ final class DownloadCenter: ObservableObject {
     func resume(_ id: String) {
         guard let item = item(for: id) else { return }
         switch item.store {
+        case .local: return
         case .epic:
             update(id) { $0.state = .queued }
             pumpEpic()
@@ -154,6 +158,7 @@ final class DownloadCenter: ObservableObject {
         nextOrder += 1
         update(id) { $0.order = -nextOrder; if $0.state == .paused { $0.state = .queued } }
         switch item.store {
+        case .local: return
         case .epic:
             if let current = epicActiveID, current != id {
                 update(current) { $0.state = .queued; $0.networkBytesPerSecond = 0; $0.diskBytesPerSecond = 0 }
@@ -170,6 +175,7 @@ final class DownloadCenter: ObservableObject {
         guard let item = item(for: id) else { return }
         items.removeAll { $0.id == id }
         switch item.store {
+        case .local: return
         case .epic: if epicActiveID == id { epicTask?.cancel() }
         case .steam: steamCommand { try await $0.cancelDownload(appID: item.storeID) }
         }

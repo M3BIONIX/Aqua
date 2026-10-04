@@ -72,6 +72,14 @@ private struct LibraryToolbar: View {
                 }
                 .buttonStyle(IconButtonStyle(size: 34))
                 .help("Refresh both libraries")
+                Button { model.showAddGame = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus").font(.system(size: 11, weight: .bold))
+                        Text("Add game")
+                    }
+                }
+                .buttonStyle(SecondaryButtonStyle(height: 34))
+                .help("Add a Windows game from a .exe or installer on this Mac")
             }
             .padding(.bottom, 10)
         }
@@ -333,9 +341,13 @@ private struct EmptyLibrary: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(.geist(15, .medium))
             Text(detail).font(.geist(14)).foregroundStyle(Theme.mutedText)
-            if !model.hasAnyAccount {
-                Button("Connect a store") { model.route = .settings }.buttonStyle(PrimaryButtonStyle()).padding(.top, 6)
+            HStack(spacing: 10) {
+                if !model.hasAnyAccount {
+                    Button("Connect a store") { model.route = .settings }.buttonStyle(PrimaryButtonStyle())
+                }
+                Button("Add a game from this Mac") { model.showAddGame = true }.buttonStyle(SecondaryButtonStyle())
             }
+            .padding(.top, 6)
         }
         .padding(.vertical, 48)
     }

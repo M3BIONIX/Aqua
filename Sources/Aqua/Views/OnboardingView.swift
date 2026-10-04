@@ -146,6 +146,8 @@ private struct StoreRow: View {
     @ViewBuilder
     private var action: some View {
         switch store {
+        case .local:
+            EmptyView()
         case .epic:
             if model.epicAccount != nil {
                 Button("Sign out") { model.logoutEpic() }.buttonStyle(SecondaryButtonStyle())

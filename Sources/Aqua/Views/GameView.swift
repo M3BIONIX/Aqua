@@ -39,6 +39,11 @@ struct GameView: View {
                             if case .epic(let g) = game.source, g.install != nil {
                                 Button("Uninstall") { model.uninstall(game) }.buttonStyle(SecondaryButtonStyle(height: 42))
                             }
+                            if case .local = game.source {
+                                Button("Remove from library") { model.removeLocalGame(game) }
+                                    .buttonStyle(SecondaryButtonStyle(height: 42))
+                                    .help("The game's files stay where they are")
+                            }
                         }
                         .padding(.top, 6)
                     }
@@ -85,7 +90,11 @@ struct GameView: View {
                     }
                     PageSection(title: "Details") {
                         DetailRow(label: "Store", value: game.store.displayName)
-                        DetailRow(label: game.store == .steam ? "App ID" : "App name", value: game.storeID, mono: true)
+                        if case .local(let g) = game.source {
+                            DetailRow(label: "Program", value: g.executable, mono: true)
+                        } else {
+                            DetailRow(label: game.store == .steam ? "App ID" : "App name", value: game.storeID, mono: true)
+                        }
                         if game.installedBytes > 0 { DetailRow(label: "Size on disk", value: Format.bytes(game.installedBytes), mono: true) }
                         if let path = model.installPath(of: game) { DetailRow(label: "Location", value: path, mono: true) }
                         DetailRow(label: "Wine engine", value: (recipe.engine ?? .default).displayName)

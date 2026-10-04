@@ -133,7 +133,7 @@ private struct StoreLoadRow: View {
 }
 
 /// A short bar sliding along the track, for work with no measurable progress.
-private struct IndeterminateLine: View {
+struct IndeterminateLine: View {
     @State private var phase: CGFloat = -0.3
 
     var body: some View {
