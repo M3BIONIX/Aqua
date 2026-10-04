@@ -179,6 +179,8 @@ Aqua's default engine is built from CodeWeavers' CrossOver 26.3 source (Wine 11)
    enumerate system objects at startup (Hogwarts Legacy) don't loop forever.
 5. 32-bit programs can't reserve a block larger than Windows would give them (0x7fff0000 bytes), so
    FreeArc-based repack installers don't spin at 0% probing memory.
+6. `D3DKMTOpenAdapterFromHdc` opens the primary display's adapter instead of failing, so games that
+   look up their GPU this way (Need for Speed: The Run) start.
 
 ```sh
 Engine/build-engine.sh        # about 10 minutes on Apple Silicon, produces aqua-wine-cx26.3.0-r<N>.tar.xz

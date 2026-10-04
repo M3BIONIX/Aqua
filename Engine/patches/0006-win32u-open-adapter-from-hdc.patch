@@ -1,0 +1,64 @@
+Aqua: implement D3DKMTOpenAdapterFromHdc.
+
+Wine only had a stub that returned STATUS_NO_MEMORY. Need for Speed: The Run looks for NVAPI and AMD
+ADL first, then falls back to this call; with the stub it quits with "Could Not Get Primary Adapter
+Handle". Opens the adapter driving the primary display, like D3DKMTOpenAdapterFromGdiDisplayName.
+
+--- a/dlls/win32u/d3dkmt.c	2026-10-04 17:11:30
++++ b/dlls/win32u/d3dkmt.c	2026-10-04 17:15:53
+@@ -522,15 +522,6 @@
+ }
+ 
+ /******************************************************************************
+- *           NtGdiDdDDIOpenAdapterFromHdc    (win32u.@)
+- */
+-NTSTATUS WINAPI NtGdiDdDDIOpenAdapterFromHdc( D3DKMT_OPENADAPTERFROMHDC *desc )
+-{
+-    FIXME( "(%p): stub\n", desc );
+-    return STATUS_NO_MEMORY;
+-}
+-
+-/******************************************************************************
+  *           NtGdiDdDDIEscape    (win32u.@)
+  */
+ NTSTATUS WINAPI NtGdiDdDDIEscape( const D3DKMT_ESCAPE *desc )
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -3807,8 +3807,37 @@
+     source_release( source );
+     return status;
+ }
++
++
++/******************************************************************************
++ *           NtGdiDdDDIOpenAdapterFromHdc    (win32u.@)
++ *
++ * Aqua: opens the adapter driving the primary display. Wine only had a stub, and Need for Speed:
++ * The Run quits with "Could Not Get Primary Adapter Handle" when neither NVAPI nor AMD ADL is present.
++ */
++NTSTATUS WINAPI NtGdiDdDDIOpenAdapterFromHdc( D3DKMT_OPENADAPTERFROMHDC *desc )
++{
++    NTSTATUS status = STATUS_UNSUCCESSFUL;
++    D3DKMT_OPENADAPTERFROMLUID luid_desc;
++    struct source *source;
+ 
++    TRACE( "desc %p, hdc %p\n", desc, desc ? desc->hDc : NULL );
+ 
++    if (!desc || !desc->hDc) return STATUS_INVALID_PARAMETER;
++    if (!(source = find_source( NULL ))) return STATUS_UNSUCCESSFUL;
++
++    luid_desc.AdapterLuid = source->gpu->luid;
++    if (!(status = NtGdiDdDDIOpenAdapterFromLuid( &luid_desc )))
++    {
++        desc->hAdapter = luid_desc.hAdapter;
++        desc->AdapterLuid = luid_desc.AdapterLuid;
++        desc->VidPnSourceId = source->id + 1;
++    }
++
++    source_release( source );
++    return status;
++}
++
+ /***********************************************************************
+  *	     NtUserEnumDisplayDevices    (win32u.@)
+  */
