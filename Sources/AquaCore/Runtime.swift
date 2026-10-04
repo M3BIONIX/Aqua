@@ -17,9 +17,9 @@ public enum RuntimeComponents {
 
     /// Aqua Wine: CodeWeavers' CrossOver 26.3 Wine with Aqua's patches, built by Engine/build-engine.sh.
     public static let aquaEngine = RuntimeComponent(
-        name: "Aqua Wine", version: "CrossOver 26.3.0 r5",
-        url: URL(string: "\(releaseBase)/engine-cx26.3.0-r5/aqua-wine-cx26.3.0-r5.tar.xz")!,
-        sha256: "024bc3742a3cc9d40ca8aaf1799866b09c730d9ea58e5b936ab4d9ebd0ebfc2f", archiveRoot: "AquaWine")
+        name: "Aqua Wine", version: "CrossOver 26.3.0 r6",
+        url: URL(string: "\(releaseBase)/engine-cx26.3.0-r6/aqua-wine-cx26.3.0-r6.tar.xz")!,
+        sha256: "bf55850c2ace2ef4b8d609800b03d381c7e661325168724479a461c2b6ad21bb", archiveRoot: "AquaWine")
 
     /// Sikarugir Wine 10.0. Its 11.0 builds fail to start Windows processes on macOS 26.5.
     public static let engine = RuntimeComponent(
