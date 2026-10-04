@@ -40,11 +40,13 @@ public struct GameRecipe: Codable, Equatable, Sendable {
     public var advertiseAVX: Bool?
     /// Game settings written before launch so it renders at the display's resolution.
     public var display: [DisplaySetting]?
+    /// Other settings files changed before launch. Bundled and user entries both apply, user last.
+    public var files: [DisplaySetting]?
     public var notes: String?
 
     public init(engine: WineEngine? = nil, renderer: Renderer? = nil, windowsVersion: String? = nil, environment: [String: String]? = nil,
                 dllOverrides: [String: String]? = nil, arguments: [String]? = nil, advertiseAVX: Bool? = nil,
-                display: [DisplaySetting]? = nil, notes: String? = nil) {
+                display: [DisplaySetting]? = nil, files: [DisplaySetting]? = nil, notes: String? = nil) {
         self.engine = engine
         self.renderer = renderer
         self.windowsVersion = windowsVersion
@@ -53,8 +55,12 @@ public struct GameRecipe: Codable, Equatable, Sendable {
         self.arguments = arguments
         self.advertiseAVX = advertiseAVX
         self.display = display
+        self.files = files
         self.notes = notes
     }
+
+    /// Everything written to game files before launch.
+    public var settingsFiles: [DisplaySetting] { (display ?? []) + (files ?? []) }
 
     public static let defaults = GameRecipe(engine: .default, renderer: .d3dmetal, windowsVersion: "win10", advertiseAVX: true)
 
@@ -70,6 +76,7 @@ public struct GameRecipe: Codable, Equatable, Sendable {
             arguments: other.arguments ?? arguments,
             advertiseAVX: other.advertiseAVX ?? advertiseAVX,
             display: other.display ?? display,
+            files: (files ?? []) + (other.files ?? []),
             notes: other.notes ?? notes
         )
     }
@@ -97,6 +104,32 @@ public struct RecipeBook: Sendable {
             for (key, recipe) in custom { book[key] = (book[key] ?? GameRecipe()).merged(with: recipe) }
         }
         return RecipeBook(recipes: book)
+    }
+
+    /// The recipe Aqua ships for a game, without the user's changes.
+    public static func bundled(for store: Store, id: String) -> GameRecipe? {
+        guard let url = Bundle.resources(named: "Aqua_AquaCore", fallback: { .module }).url(forResource: "recipes", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let bundled = try? JSONDecoder().decode([String: GameRecipe].self, from: data) else { return nil }
+        return bundled[key(store, id)]
+    }
+
+    /// The user's own changes for a game, as saved in their recipes.json.
+    public static func userOverride(for store: Store, id: String, paths: AquaPaths = .shared) -> GameRecipe? {
+        guard let data = try? Data(contentsOf: paths.root.appendingPathComponent("recipes.json")),
+              let custom = try? JSONDecoder().decode([String: GameRecipe].self, from: data) else { return nil }
+        return custom[key(store, id)]
+    }
+
+    /// Replaces the user's changes for a game; `nil` goes back to Aqua's own settings.
+    public static func setUserOverride(_ recipe: GameRecipe?, store: Store, id: String, paths: AquaPaths = .shared) throws {
+        let url = paths.root.appendingPathComponent("recipes.json")
+        var custom = (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode([String: GameRecipe].self, from: $0) } ?? [:]
+        custom[key(store, id)] = recipe
+        try paths.ensure(paths.root)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(custom).write(to: url, options: .atomic)
     }
 
     public func recipe(for store: Store, id: String) -> GameRecipe {

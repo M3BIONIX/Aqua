@@ -174,7 +174,7 @@ public struct Bottle: Sendable, Hashable {
         try mapDrive(Bottle.gamesDrive, to: settings.gamesURL)
         try await setRetinaMode(settings.retinaMode, using: runtime)
         if recipe.renderer == .dxvk, !engine.usesRendererVariables { try installDXVK() }
-        try await DisplaySettingsWriter.apply(recipe.display ?? [], size: .main(retina: settings.retinaMode), bottle: self, runtime: runtime)
+        try await DisplaySettingsWriter.apply(recipe.settingsFiles, size: .main(retina: settings.retinaMode), bottle: self, runtime: runtime)
     }
 
     /// Stops every Windows process in this bottle (Steam, games, helpers).

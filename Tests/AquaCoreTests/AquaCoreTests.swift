@@ -265,4 +265,64 @@ final class DisplaySettingsTests: XCTestCase {
         XCTAssertEqual(kv, "\"setting.defaultres\"\t\t\"3024\"")
         XCTAssertEqual(DisplaySettingsWriter.patch("Resolution = 800 600", format: .ini, values: ["Resolution": "3024 1964"]), "Resolution = 3024 1964")
     }
+
+    func testAddsMissingKeysUnderSection() {
+        let added = DisplaySettingsWriter.patch("[Core.System]\nPaths=../\n\n[Other]\nA=1\n", format: .ini,
+                                                values: ["r.WarnOfBadDrivers": "0"], section: "SystemSettings")
+        XCTAssertEqual(added, "[Core.System]\nPaths=../\n\n[Other]\nA=1\n\n[SystemSettings]\nr.WarnOfBadDrivers=0\n")
+        let existing = DisplaySettingsWriter.patch("[SystemSettings]\nr.Foo=1\n\n[Other]\nA=1\n", format: .ini,
+                                                   values: ["r.WarnOfBadDrivers": "0"], section: "SystemSettings")
+        XCTAssertEqual(existing, "[SystemSettings]\nr.Foo=1\nr.WarnOfBadDrivers=0\n\n[Other]\nA=1\n")
+        let replaced = DisplaySettingsWriter.patch("[SystemSettings]\nr.WarnOfBadDrivers=1\n", format: .ini,
+                                                   values: ["r.WarnOfBadDrivers": "0"], section: "SystemSettings")
+        XCTAssertEqual(replaced, "[SystemSettings]\nr.WarnOfBadDrivers=0\n")
+        XCTAssertEqual(DisplaySettingsWriter.patch("", format: .ini, values: ["k": "v"], section: "S"), "[S]\nk=v\n")
+    }
+
+    func testWritesIntoTheBottlesWindowsUser() async throws {
+        let paths = AquaPaths(root: FileManager.default.temporaryDirectory.appendingPathComponent("aqua-files-\(UUID().uuidString)"))
+        defer { try? FileManager.default.removeItem(at: paths.root) }
+        let bottle = Bottle.forStore(.epic, engine: .aqua, paths: paths)
+        let fm = FileManager.default
+        let users = bottle.driveC.appendingPathComponent("users")
+        let config = users.appendingPathComponent("crossover/AppData/Local/HogwartsLegacy/Saved/Config/WindowsNoEditor")
+        try fm.createDirectory(at: config, withIntermediateDirectories: true)
+        try fm.createDirectory(at: users.appendingPathComponent("someone/AppData/Local"), withIntermediateDirectories: true)
+        try "[Volatile Environment]\n\"USERPROFILE\"=\"C:\\\\users\\\\crossover\"\n".write(to: bottle.prefix.appendingPathComponent("user.reg"), atomically: true, encoding: .utf8)
+        XCTAssertEqual(DisplaySettingsWriter.profileFolder(in: bottle), "C:\\users\\crossover")
+
+        let setting = DisplaySetting(format: .ini, file: "%LOCALAPPDATA%\\Hogwarts*Legacy\\Saved\\Config\\WindowsNoEditor\\Engine.ini",
+                                     section: "SystemSettings", values: ["r.WarnOfBadDrivers": "0"])
+        try await DisplaySettingsWriter.apply([setting], size: DisplaySize(width: 1, height: 1), bottle: bottle, runtime: WineRuntime(paths: paths))
+        let written = try String(contentsOf: config.appendingPathComponent("Engine.ini"), encoding: .utf8)
+        XCTAssertEqual(written, "[SystemSettings]\nr.WarnOfBadDrivers=0\n")
+    }
+}
+
+final class LaunchOptionsTextTests: XCTestCase {
+    func testPairsAndArguments() {
+        XCTAssertEqual(LaunchOptionsText.parsePairs("A=1\n# note\n B = two words \nbad line\n"), ["A": "1", "B": "two words"])
+        XCTAssertEqual(LaunchOptionsText.formatPairs(["B": "2", "A": "1"]), "A=1\nB=2")
+        XCTAssertEqual(LaunchOptionsText.parseArguments(#"-dx11 -windowed "-log=My File.txt" ''"#), ["-dx11", "-windowed", "-log=My File.txt", ""])
+        XCTAssertEqual(LaunchOptionsText.formatArguments(["-dx11", "a b"]), #"-dx11 "a b""#)
+    }
+
+    func testFilesRoundTrip() {
+        let text = """
+        %LOCALAPPDATA%\\Game\\Engine.ini
+        [SystemSettings]
+        r.WarnOfBadDrivers=0
+        [Core.Log]
+        LogTemp=Verbose
+        %APPDATA%\\Other\\settings.cfg
+        fov=90
+        """
+        let files = LaunchOptionsText.parseFiles(text)
+        XCTAssertEqual(files.count, 3)
+        XCTAssertEqual(files[0].section, "SystemSettings")
+        XCTAssertEqual(files[1].values, ["LogTemp": "Verbose"])
+        XCTAssertEqual(files[2].file, "%APPDATA%\\Other\\settings.cfg")
+        XCTAssertNil(files[2].section)
+        XCTAssertEqual(LaunchOptionsText.parseFiles(LaunchOptionsText.formatFiles(files)), files)
+    }
 }

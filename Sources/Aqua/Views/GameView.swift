@@ -80,6 +80,9 @@ struct GameView: View {
                         }
                         Text("Takes effect the next time the game starts.").font(.geist(13)).foregroundStyle(Theme.mutedText).padding(.top, 12)
                     }
+                    PageSection(title: "Launch options") {
+                        LaunchOptionsEditor(game: game)
+                    }
                     PageSection(title: "Details") {
                         DetailRow(label: "Store", value: game.store.displayName)
                         DetailRow(label: game.store == .steam ? "App ID" : "App name", value: game.storeID, mono: true)

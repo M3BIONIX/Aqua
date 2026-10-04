@@ -84,11 +84,11 @@
   },
   "steam:990080": {
     "renderer": "d3dmetal",
-    "notes": "Hogwarts Legacy. Must not fall back to Vulkan.",
+    "notes": "Hogwarts Legacy. Must not fall back to Vulkan. Unreal's outdated-driver warning is turned off: D3DMetal triggers it and it can leave the game stuck after shader compilation.",
     "display": [
       {
         "format": "ini",
-        "file": "%LOCALAPPDATA%\\Hogwarts Legacy\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
+        "file": "%LOCALAPPDATA%\\Hogwarts*Legacy\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
         "values": {
           "ResolutionSizeX": "{width}",
           "ResolutionSizeY": "{height}",
@@ -96,6 +96,16 @@
           "LastUserConfirmedResolutionSizeY": "{height}",
           "DesiredScreenWidth": "{width}",
           "DesiredScreenHeight": "{height}"
+        }
+      }
+    ],
+    "files": [
+      {
+        "format": "ini",
+        "file": "%LOCALAPPDATA%\\Hogwarts*Legacy\\Saved\\Config\\WindowsNoEditor\\Engine.ini",
+        "section": "SystemSettings",
+        "values": {
+          "r.WarnOfBadDrivers": "0"
         }
       }
     ]
@@ -163,7 +173,7 @@
     "display": [
       {
         "format": "ini",
-        "file": "%LOCALAPPDATA%\\Hogwarts Legacy\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
+        "file": "%LOCALAPPDATA%\\Hogwarts*Legacy\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
         "values": {
           "ResolutionSizeX": "{width}",
           "ResolutionSizeY": "{height}",
@@ -175,7 +185,17 @@
       }
     ],
     "renderer": "d3dmetal",
-    "notes": "Hogwarts Legacy (Epic)."
+    "notes": "Hogwarts Legacy (Epic). Unreal's outdated-driver warning is turned off: D3DMetal triggers it and it can leave the game stuck after shader compilation.",
+    "files": [
+      {
+        "format": "ini",
+        "file": "%LOCALAPPDATA%\\Hogwarts*Legacy\\Saved\\Config\\WindowsNoEditor\\Engine.ini",
+        "section": "SystemSettings",
+        "values": {
+          "r.WarnOfBadDrivers": "0"
+        }
+      }
+    ]
   },
   "steam:227300": {
     "notes": "Euro Truck Simulator 2."

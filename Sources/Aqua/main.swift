@@ -31,12 +31,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = NSHostingView(rootView: RootView().environmentObject(model).environmentObject(model.downloads))
         window.setFrameAutosaveName("AquaMainWindow")
         if !window.setFrameUsingName("AquaMainWindow") { window.center() }
-        window.makeKeyAndOrderFront(nil)
         self.window = window
-        NSApp.activate(ignoringOtherApps: true)
         #if DEBUG
-        Snapshots.runIfRequested(window: window, model: model)
+        if Snapshots.isRequested {
+            // Render without taking focus, so keystrokes meant for other apps can't press buttons here.
+            window.orderBack(nil)
+            Snapshots.runIfRequested(window: window, model: model)
+            return
+        }
         #endif
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -94,6 +99,10 @@ MainActor.assumeIsolated {
     let app = NSApplication.shared
     let delegate = AppDelegate()
     app.delegate = delegate
+    #if DEBUG
+    app.setActivationPolicy(Snapshots.isRequested ? .accessory : .regular)
+    #else
     app.setActivationPolicy(.regular)
+    #endif
     app.run()
 }

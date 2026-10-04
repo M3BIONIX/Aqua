@@ -566,6 +566,32 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
+    // MARK: Launch options
+
+    func bundledRecipe(for game: LibraryGame) -> GameRecipe? { RecipeBook.bundled(for: game.store, id: game.storeID) }
+    func userRecipe(for game: LibraryGame) -> GameRecipe? { RecipeBook.userOverride(for: game.store, id: game.storeID, paths: service.paths) }
+
+    /// Replaces the user's launch options for a game; `nil` goes back to Aqua's own.
+    func saveUserRecipe(_ recipe: GameRecipe?, for game: LibraryGame) {
+        do {
+            try RecipeBook.setUserOverride(recipe, store: game.store, id: game.storeID, paths: service.paths)
+            AquaLog.write(recipe == nil ? "launch options reset \(game.id)" : "launch options saved \(game.id)")
+            objectWillChange.send()
+        } catch { report(error) }
+    }
+
+    func bottle(for game: LibraryGame) -> Bottle {
+        switch game.store {
+        case .steam: return service.steam.bottle
+        case .epic: return service.epic.bottle(for: recipe(for: game).engine ?? .default)
+        }
+    }
+
+    func revealWindowsUserFolder(for game: LibraryGame) {
+        let local = bottle(for: game).windowsUserFolder.appendingPathComponent("AppData/Local")
+        NSWorkspace.shared.open(FileManager.default.fileExists(atPath: local.path) ? local : bottle(for: game).driveC)
+    }
+
     func chooseGamesLocation() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
